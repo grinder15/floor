@@ -13,6 +13,8 @@ abstract class AnnotationField {
   static const ENTITY_FOREIGN_KEYS = 'foreignKeys';
   static const ENTITY_INDICES = 'indices';
   static const ENTITY_PRIMARY_KEYS = 'primaryKeys';
+
+  static const TYPE_CONVERTERS_CONVERTERS = 'converters';
 }
 
 abstract class ForeignKeyField {

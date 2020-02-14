@@ -8,28 +8,46 @@ import 'package:floor_generator/misc/type_utils.dart';
 import 'package:floor_generator/processor/error/query_method_processor_error.dart';
 import 'package:floor_generator/processor/processor.dart';
 import 'package:floor_generator/value_object/entity.dart';
+import 'package:floor_generator/value_object/parameter.dart';
 import 'package:floor_generator/value_object/query_method.dart';
+import 'package:floor_generator/value_object/type_converter.dart';
 
 class QueryMethodProcessor extends Processor<QueryMethod> {
   final QueryMethodProcessorError _processorError;
 
   final MethodElement _methodElement;
   final List<Entity> _entities;
+  final List<TypeConverter> _typeConverters;
 
   QueryMethodProcessor(
     final MethodElement methodElement,
     final List<Entity> entities,
+    final List<TypeConverter> typeConverters,
   )   : assert(methodElement != null),
         assert(entities != null),
         _methodElement = methodElement,
         _entities = entities,
+        _typeConverters = typeConverters,
         _processorError = QueryMethodProcessorError(methodElement);
 
   @nonNull
   @override
   QueryMethod process() {
     final name = _methodElement.displayName;
-    final parameters = _methodElement.parameters;
+    final parameters = _methodElement.parameters.map((parameterElement) {
+      if (parameterElement.type.isSupported) {
+        // no need to search for type converters.
+        return Parameter(parameterElement);
+      }
+      // try to find a good method for that type.
+      for (final typeConverter in _typeConverters) {
+        if (typeConverter.hasMethodsToConvertType(parameterElement.type)) {
+          return Parameter(parameterElement, typeConverter: typeConverter);
+        }
+      }
+      // ok throw error!!!.
+      throw _processorError.noTypeConverterToConvertParameter(parameterElement);
+    }).toList();
     final rawReturnType = _methodElement.returnType;
 
     final query = _getQuery();

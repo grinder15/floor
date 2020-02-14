@@ -17,6 +17,14 @@ class QueryMethodProcessorError {
     );
   }
 
+  InvalidGenerationSourceError noTypeConverterToConvertParameter(
+      ParameterElement parameterElement) {
+    return InvalidGenerationSourceError(
+      'The type of this parameter is not supported.',
+      element: parameterElement,
+    );
+  }
+
   InvalidGenerationSourceError
       // ignore: non_constant_identifier_names
       get QUERY_ARGUMENTS_AND_METHOD_PARAMETERS_DO_NOT_MATCH {

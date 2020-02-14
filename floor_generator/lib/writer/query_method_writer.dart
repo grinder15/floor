@@ -36,16 +36,16 @@ class QueryMethodWriter implements Writer {
 
   List<Parameter> _generateMethodParameters() {
     return _queryMethod.parameters.map((parameter) {
-      if (!parameter.type.isSupported) {
-        InvalidGenerationSourceError(
+      /*if (!parameter.type.isSupported) {
+        throw InvalidGenerationSourceError(
           'The type of this parameter is not supported.',
           element: parameter,
         );
-      }
+      }*/
 
       return Parameter((builder) => builder
-        ..name = parameter.name
-        ..type = refer(parameter.type.getDisplayString()));
+        ..name = parameter.parameterElement.name
+        ..type = refer(parameter.parameterElement.type.getDisplayString()));
     }).toList();
   }
 
@@ -78,9 +78,10 @@ class QueryMethodWriter implements Writer {
     var index = 0;
     return _queryMethod.parameters
         .map((parameter) {
-          if (parameter.type.isDartCoreList) {
+          if (parameter.parameterElement.type.isDartCoreList) {
+            // TODO: repair this..
             index++;
-            return '''final valueList$index = ${parameter.displayName}.map((value) => "'\$value'").join(', ');''';
+            return '''final valueList$index = ${parameter.parameterElement.displayName}.map((value) => "'\$value'").join(', ');''';
           } else {
             return null;
           }
@@ -93,8 +94,15 @@ class QueryMethodWriter implements Writer {
   List<String> _generateParameters() {
     return _queryMethod.parameters
         .map((parameter) {
-          if (!parameter.type.isDartCoreList) {
-            return parameter.displayName;
+          // if its not a list and is supported type.
+          if (!parameter.parameterElement.type.isDartCoreList &&
+              parameter.parameterElement.type.isSupported) {
+            return parameter.parameterElement.displayName;
+          } else if (parameter.typeConverter != null) {
+            // convert the unsupported type.
+            return parameter.typeConverter.convertToSql(
+                parameter.parameterElement.type,
+                parameter.parameterElement.displayName);
           } else {
             return null;
           }

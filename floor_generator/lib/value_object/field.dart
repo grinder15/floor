@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:floor_generator/misc/annotations.dart';
+import 'package:floor_generator/value_object/type_converter.dart';
 
 /// Represents an Entity field and thus a table column.
 class Field {
@@ -8,14 +9,11 @@ class Field {
   final String columnName;
   final bool isNullable;
   final String sqlType;
+  final TypeConverter typeConverter;
 
-  Field(
-    this.fieldElement,
-    this.name,
-    this.columnName,
-    this.isNullable,
-    this.sqlType,
-  );
+  Field(this.fieldElement, this.name, this.columnName, this.isNullable,
+      this.sqlType,
+      {this.typeConverter});
 
   /// The database column definition.
   @nonNull

@@ -65,6 +65,16 @@ class EntityProcessorError {
     );
   }
 
+  // ignore: non_constant_identifier_names
+  InvalidGenerationSourceError get CANT_CONVERT_UNSUPPORTED_TYPE_FIELD {
+    return InvalidGenerationSourceError(
+      'No type converter that can convert unsupported type.',
+      todo:
+          'Make sure to define type converter to converted unsupported types, otherwise use @ignore annotation',
+      element: _classElement,
+    );
+  }
+
   InvalidGenerationSourceError noMatchingColumn(
     final List<String> columnNames,
   ) {

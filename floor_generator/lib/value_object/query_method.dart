@@ -3,6 +3,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
 import 'package:floor_generator/misc/type_utils.dart';
 import 'package:floor_generator/value_object/entity.dart';
+import 'package:floor_generator/value_object/parameter.dart';
 
 /// Wraps a method annotated with Query
 /// to enable easy access to code generation relevant data.
@@ -26,7 +27,7 @@ class QueryMethod {
   /// Stream<List<T>> -> T
   final DartType flattenedReturnType;
 
-  final List<ParameterElement> parameters;
+  final List<Parameter> parameters;
 
   final Entity entity;
 
@@ -62,7 +63,7 @@ class QueryMethod {
           query == other.query &&
           rawReturnType == other.rawReturnType &&
           flattenedReturnType == other.flattenedReturnType &&
-          const ListEquality<ParameterElement>()
+          const ListEquality<Parameter>()
               .equals(parameters, other.parameters) &&
           entity == other.entity;
 

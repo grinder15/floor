@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:floor_annotation/floor_annotation.dart' as annotations
-    show Database, dao, Entity;
+    show Database, dao, Entity, TypeConverters;
 import 'package:floor_generator/misc/annotations.dart';
 import 'package:floor_generator/misc/constants.dart';
 import 'package:floor_generator/misc/type_utils.dart';
@@ -8,9 +8,11 @@ import 'package:floor_generator/processor/dao_processor.dart';
 import 'package:floor_generator/processor/entity_processor.dart';
 import 'package:floor_generator/processor/error/database_processor_error.dart';
 import 'package:floor_generator/processor/processor.dart';
+import 'package:floor_generator/processor/type_converter_processor.dart';
 import 'package:floor_generator/value_object/dao_getter.dart';
 import 'package:floor_generator/value_object/database.dart';
 import 'package:floor_generator/value_object/entity.dart';
+import 'package:floor_generator/value_object/type_converter.dart';
 
 class DatabaseProcessor extends Processor<Database> {
   final DatabaseProcessorError _processorError;
@@ -26,8 +28,10 @@ class DatabaseProcessor extends Processor<Database> {
   @override
   Database process() {
     final databaseName = _classElement.displayName;
-    final entities = _getEntities(_classElement);
-    final daoGetters = _getDaoGetters(databaseName, entities);
+    // Written by jerome
+    final typeConverters = _getTypeConverters();
+    final entities = _getEntities(typeConverters);
+    final daoGetters = _getDaoGetters(databaseName, entities, typeConverters);
     final version = _getDatabaseVersion();
 
     return Database(_classElement, databaseName, entities, daoGetters, version);
@@ -50,17 +54,15 @@ class DatabaseProcessor extends Processor<Database> {
   List<DaoGetter> _getDaoGetters(
     final String databaseName,
     final List<Entity> entities,
+    final List<TypeConverter> typeConverter,
   ) {
     return _classElement.fields.where(_isDao).map((field) {
       final classElement = field.type.element as ClassElement;
       final name = field.displayName;
 
       final dao = DaoProcessor(
-        classElement,
-        name,
-        databaseName,
-        entities,
-      ).process();
+              classElement, name, databaseName, entities, typeConverter)
+          .process();
 
       return DaoGetter(field, name, dao);
     }).toList();
@@ -79,7 +81,7 @@ class DatabaseProcessor extends Processor<Database> {
   }
 
   @nonNull
-  List<Entity> _getEntities(final ClassElement databaseClassElement) {
+  List<Entity> _getEntities(List<TypeConverter> typeConverters) {
     final entities = _classElement
         .getAnnotation(annotations.Database)
         .getField(AnnotationField.DATABASE_ENTITIES)
@@ -87,7 +89,8 @@ class DatabaseProcessor extends Processor<Database> {
         ?.map((object) => object.toTypeValue().element)
         ?.whereType<ClassElement>()
         ?.where(_isEntity)
-        ?.map((classElement) => EntityProcessor(classElement).process())
+        ?.map((classElement) =>
+            EntityProcessor(classElement, typeConverters).process())
         ?.toList();
 
     if (entities == null || entities.isEmpty) {
@@ -95,6 +98,20 @@ class DatabaseProcessor extends Processor<Database> {
     }
 
     return entities;
+  }
+
+  @nonNull
+  List<TypeConverter> _getTypeConverters() {
+    final typeConverters = _classElement
+        .getAnnotation(annotations.TypeConverters)
+        .getField(AnnotationField.TYPE_CONVERTERS_CONVERTERS)
+        ?.toListValue()
+        ?.map((object) => object.toTypeValue().element)
+        ?.whereType<ClassElement>()
+        ?.map((classElement) => TypeConverterProcessor(classElement).process())
+        ?.where((typeConverter) => typeConverter.hasMethods)
+        ?.toList();
+    return typeConverters;
   }
 
   @nonNull

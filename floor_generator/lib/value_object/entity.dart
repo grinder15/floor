@@ -5,6 +5,8 @@ import 'package:floor_generator/value_object/field.dart';
 import 'package:floor_generator/value_object/foreign_key.dart';
 import 'package:floor_generator/value_object/index.dart';
 import 'package:floor_generator/value_object/primary_key.dart';
+import 'package:floor_generator/misc/type_utils.dart';
+import 'package:source_gen/source_gen.dart';
 
 class Entity {
   final ClassElement classElement;
@@ -60,7 +62,7 @@ class Entity {
   String getValueMapping() {
     final keyValueList = fields.map((field) {
       final columnName = field.columnName;
-      final attributeValue = _getAttributeValue(field.fieldElement);
+      final attributeValue = _getAttributeValue(field);
       return "'$columnName': $attributeValue";
     }).toList();
 
@@ -68,11 +70,26 @@ class Entity {
   }
 
   @nonNull
-  String _getAttributeValue(final FieldElement fieldElement) {
-    final parameterName = fieldElement.displayName;
-    return fieldElement.type.isDartCoreBool
-        ? 'item.$parameterName ? 1 : 0'
-        : 'item.$parameterName';
+  String _getAttributeValue(final Field field) {
+    final parameterName = field.fieldElement.displayName;
+    if (field.fieldElement.type.isSupported) {
+      if (field.fieldElement.type.isDartCoreBool) {
+        return 'item.$parameterName ? 1 : 0';
+      } else {
+        return 'item.$parameterName';
+      }
+    } else {
+      // try to convert the value.
+      final convertedValue = field.typeConverter
+          ?.convertToSql(field.fieldElement.type, 'item.$parameterName');
+      if (convertedValue != null) {
+        return convertedValue;
+      }
+      throw InvalidGenerationSourceError(
+        'Cant convert ${field.fieldElement.type} to supported SQL type. Try to define TypeConverter to convert that type to supported SQL types.',
+        element: field.fieldElement,
+      );
+    }
   }
 
   @override

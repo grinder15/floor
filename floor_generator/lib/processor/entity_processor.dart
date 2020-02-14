@@ -14,15 +14,19 @@ import 'package:floor_generator/value_object/field.dart';
 import 'package:floor_generator/value_object/foreign_key.dart';
 import 'package:floor_generator/value_object/index.dart';
 import 'package:floor_generator/value_object/primary_key.dart';
+import 'package:floor_generator/value_object/type_converter.dart';
 
 class EntityProcessor extends Processor<Entity> {
   final ClassElement _classElement;
   final EntityProcessorError _processorError;
+  final List<TypeConverter> _typeConverters;
 
-  EntityProcessor(final ClassElement classElement)
+  EntityProcessor(
+      final ClassElement classElement, final List<TypeConverter> typeConverters)
       : assert(classElement != null),
         _classElement = classElement,
-        _processorError = EntityProcessorError(classElement);
+        _processorError = EntityProcessorError(classElement),
+        _typeConverters = typeConverters;
 
   @nonNull
   @override
@@ -54,7 +58,7 @@ class EntityProcessor extends Processor<Entity> {
   List<Field> _getFields() {
     return _classElement.fields
         .where((fieldElement) => fieldElement.shouldBeIncluded())
-        .map((field) => FieldProcessor(field).process())
+        .map((field) => FieldProcessor(field, _typeConverters).process())
         .toList();
   }
 
@@ -245,7 +249,7 @@ class EntityProcessor extends Processor<Entity> {
     if (field != null) {
       final parameterValue = "row['${field.columnName}']";
       final castedParameterValue =
-          _castParameterValue(parameterElement.type, parameterValue);
+          _castParameterValue(parameterElement.type, parameterValue, field);
       if (parameterElement.isNamed) {
         return '$parameterName: $castedParameterValue';
       }
@@ -259,6 +263,7 @@ class EntityProcessor extends Processor<Entity> {
   String _castParameterValue(
     final DartType parameterType,
     final String parameterValue,
+    final Field field,
   ) {
     if (parameterType.isDartCoreBool) {
       return '($parameterValue as int) != 0'; // maps int to bool
@@ -266,9 +271,27 @@ class EntityProcessor extends Processor<Entity> {
       return '$parameterValue as String';
     } else if (parameterType.isDartCoreInt) {
       return '$parameterValue as int';
-    } else {
+    } else if (parameterType.isDartCoreDouble) {
       return '$parameterValue as double'; // must be double
+    } else {
+      final convertedDartValue = field.typeConverter?.convertToDart(
+          parameterType,
+          '$parameterValue as ${_getSqlTypeToDartType(field.sqlType)}');
+      if (convertedDartValue != null) {
+        return convertedDartValue;
+      }
+      throw _processorError.CANT_CONVERT_UNSUPPORTED_TYPE_FIELD;
     }
+  }
+}
+
+String _getSqlTypeToDartType(String sqlType) {
+  if (sqlType == SqlType.INTEGER) {
+    return 'int';
+  } else if (sqlType == SqlType.TEXT) {
+    return 'String';
+  } else {
+    return SqlType.REAL;
   }
 }
 

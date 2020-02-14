@@ -14,6 +14,7 @@ import 'package:floor_generator/value_object/entity.dart';
 import 'package:floor_generator/value_object/insertion_method.dart';
 import 'package:floor_generator/value_object/query_method.dart';
 import 'package:floor_generator/value_object/transaction_method.dart';
+import 'package:floor_generator/value_object/type_converter.dart';
 import 'package:floor_generator/value_object/update_method.dart';
 
 class DaoProcessor extends Processor<Dao> {
@@ -21,12 +22,14 @@ class DaoProcessor extends Processor<Dao> {
   final String _daoGetterName;
   final String _databaseName;
   final List<Entity> _entities;
+  final List<TypeConverter> _typeConverters;
 
   DaoProcessor(
     final ClassElement classElement,
     final String daoGetterName,
     final String databaseName,
     final List<Entity> entities,
+    final List<TypeConverter> typeConverters,
   )   : assert(classElement != null),
         assert(daoGetterName != null),
         assert(databaseName != null),
@@ -34,7 +37,8 @@ class DaoProcessor extends Processor<Dao> {
         _classElement = classElement,
         _daoGetterName = daoGetterName,
         _databaseName = databaseName,
-        _entities = entities;
+        _entities = entities,
+        _typeConverters = typeConverters;
 
   @override
   Dao process() {
@@ -64,7 +68,7 @@ class DaoProcessor extends Processor<Dao> {
   List<QueryMethod> _getQueryMethods(final List<MethodElement> methods) {
     return methods
         .where((method) => method.hasAnnotation(annotations.Query))
-        .map((method) => QueryMethodProcessor(method, _entities).process())
+        .map((method) => QueryMethodProcessor(method, _entities, _typeConverters).process())
         .toList();
   }
 
