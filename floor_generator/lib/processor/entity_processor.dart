@@ -57,7 +57,8 @@ class EntityProcessor extends Processor<Entity> {
   @nonNull
   List<Field> _getFields() {
     return _classElement.fields
-        .where((fieldElement) => fieldElement.shouldBeIncluded())
+        .where((fieldElement) => fieldElement.shouldBeIncluded(
+            isClassSuperTypeEquatable: _classElement.isSuperTypeEquatable))
         .map((field) => FieldProcessor(field, _typeConverters).process())
         .toList();
   }
@@ -295,10 +296,24 @@ String _getSqlTypeToDartType(String sqlType) {
   }
 }
 
+extension on ClassElement {
+  bool get isSuperTypeEquatable => supertype.element.displayName == 'Equatable';
+}
+
 extension on FieldElement {
-  bool shouldBeIncluded() {
+  bool shouldBeIncluded({bool isClassSuperTypeEquatable = false}) {
     final isIgnored = hasAnnotation(annotations.ignore.runtimeType);
     final isHashCode = displayName == 'hashCode';
-    return !(isStatic || isHashCode || isIgnored);
+    final isRuntimeType = displayName == 'runtimeType';
+    //final hasGetter = getter != null;
+    //final hasSetter = setter != null;
+    // i'm using equatableHere wtf
+    final isEquatableProperty =
+        isClassSuperTypeEquatable ? displayName == 'props' : false;
+    return !(isStatic ||
+        isHashCode ||
+        isRuntimeType ||
+        isIgnored ||
+        isEquatableProperty);
   }
 }

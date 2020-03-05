@@ -24,7 +24,26 @@ class TransactionMethodWriter implements Writer {
         method.parameterElements.map((parameter) => parameter.name).join(', ');
     final methodCall = '${method.name}($parameters)';
 
-    return '''
+    final methodBodyBuffer = StringBuffer();
+
+    methodBodyBuffer
+        .writeln('${method.returnType.getDisplayString()} returnValue;');
+    methodBodyBuffer.writeln('if (database is sqflite.Transaction) {');
+    methodBodyBuffer.write('returnValue = ');
+    methodBodyBuffer.writeln('super.$methodCall;');
+    methodBodyBuffer.writeln('} else {');
+    methodBodyBuffer.writeln(
+        'await (database as sqflite.Database).transaction<void>((transaction) async {');
+    methodBodyBuffer.writeln(
+        'final transactionDatabase = _\$${method.databaseName}(changeListener)..database = transaction;');
+    methodBodyBuffer.write('returnValue = ');
+    methodBodyBuffer
+        .writeln('transactionDatabase.${method.daoFieldName}.$methodCall;');
+    methodBodyBuffer.writeln('});');
+    methodBodyBuffer.writeln('}');
+    methodBodyBuffer.writeln('return await returnValue;');
+
+    /*return '''
     if (database is sqflite.Transaction) {
       await super.$methodCall;
     } else {
@@ -33,7 +52,8 @@ class TransactionMethodWriter implements Writer {
         await transactionDatabase.${method.daoFieldName}.$methodCall;
       });
     }
-    ''';
+    ''';*/
+    return methodBodyBuffer.toString();
   }
 
   List<Parameter> _generateParameters() {
