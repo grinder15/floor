@@ -104,14 +104,14 @@ class DatabaseProcessor extends Processor<Database> {
   List<TypeConverter> _getTypeConverters() {
     final typeConverters = _classElement
         .getAnnotation(annotations.TypeConverters)
-        .getField(AnnotationField.TYPE_CONVERTERS_CONVERTERS)
+        ?.getField(AnnotationField.TYPE_CONVERTERS_CONVERTERS)
         ?.toListValue()
         ?.map((object) => object.toTypeValue().element)
         ?.whereType<ClassElement>()
         ?.map((classElement) => TypeConverterProcessor(classElement).process())
         ?.where((typeConverter) => typeConverter.hasMethods)
         ?.toList();
-    return typeConverters;
+    return typeConverters ?? [];
   }
 
   @nonNull
